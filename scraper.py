@@ -14,4 +14,5 @@ else:
 soup = BeautifulSoup(html_content, "html.parser")
 
 buffer = soup.find(title="Buffer")
+print(buffer)
 print(buffer.find("href"))
