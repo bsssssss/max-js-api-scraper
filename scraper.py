@@ -13,7 +13,5 @@ else:
 
 soup = BeautifulSoup(html_content, "html.parser")
 
-categories = soup.find_all('h2')
-
-for category in categories:
-    print(category)
+buffer = soup.find(title="Buffer")
+print(buffer.find("href"))
