@@ -7,12 +7,21 @@ response = requests.get(url)
 # Check if request was successful
 if (response.status_code == 200):
     html_content = response.text
-    # print(html_content)
 else:
     print(f"Error: {response.status_code}")
 
 soup = BeautifulSoup(html_content, "html.parser")
 
-buffer = soup.find(title="Buffer")
-print(buffer)
-print(buffer.find("href"))
+categories = soup.find_all('h2')
+
+for category in categories:
+    table = category.find_next()
+    links = table.find_all('a')
+    category_name = category.text
+
+    for link in links:
+        title = link.get('title')
+        link = link.get('href')
+
+        if (title):
+            print(category_name, title, link)
