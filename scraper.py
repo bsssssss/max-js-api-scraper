@@ -1,27 +1,99 @@
 from bs4 import BeautifulSoup
 import requests
 
-url = "https://docs.cycling74.com/apiref/js/"
-response = requests.get(url)
 
-# Check if request was successful
-if (response.status_code == 200):
-    html_content = response.text
-else:
-    print(f"Error: {response.status_code}")
+# ripped from https://stackoverflow.com/questions/3229419/how-to-pretty-print-nested-dictionaries
+class Formatter(object):
+    def __init__(self):
+        self.types = {}
+        self.htchar = '\t'
+        self.lfchar = '\n'
+        self.indent = 0
+        self.set_formater(object, self.__class__.format_object)
+        self.set_formater(dict, self.__class__.format_dict)
+        self.set_formater(list, self.__class__.format_list)
+        self.set_formater(tuple, self.__class__.format_tuple)
 
-soup = BeautifulSoup(html_content, "html.parser")
+    def set_formater(self, obj, callback):
+        self.types[obj] = callback
 
-categories = soup.find_all('h2')
+    def __call__(self, value, **args):
+        for key in args:
+            setattr(self, key, args[key])
+        formater = self.types[type(value) if type(
+            value) in self.types else object]
+        return formater(self, value, self.indent)
 
-for category in categories:
-    table = category.find_next()
-    links = table.find_all('a')
-    category_name = category.text
+    def format_object(self, value, indent):
+        return repr(value)
 
-    for link in links:
-        title = link.get('title')
-        link = link.get('href')
+    def format_dict(self, value, indent):
+        items = [
+            self.lfchar + self.htchar * (indent + 1) + repr(key) + ': ' +
+            (self.types[type(value[key]) if type(value[key]) in self.types else object])(
+                self, value[key], indent + 1)
+            for key in value
+        ]
+        return '{%s}' % (','.join(items) + self.lfchar + self.htchar * indent)
 
-        if (title):
-            print(category_name, title, link)
+    def format_list(self, value, indent):
+        items = [
+            self.lfchar + self.htchar * (indent + 1) + (self.types[type(item) if type(
+                item) in self.types else object])(self, item, indent + 1)
+            for item in value
+        ]
+        return '[%s]' % (','.join(items) + self.lfchar + self.htchar * indent)
+
+    def format_tuple(self, value, indent):
+        items = [
+            self.lfchar + self.htchar * (indent + 1) + (self.types[type(item) if type(
+                item) in self.types else object])(self, item, indent + 1)
+            for item in value
+        ]
+        return '(%s)' % (','.join(items) + self.lfchar + self.htchar * indent)
+
+
+pretty = Formatter()
+
+
+def make_api_structure(html_doc):
+    api_structure = {}
+    soup = BeautifulSoup(html_doc, 'html.parser')
+    categories = soup.find_all('h2')
+
+    for category in categories:
+        table = category.find_next()
+        links = table.find_all('a')
+        category_name = category.text
+
+        if (category_name not in api_structure):
+            api_structure[category_name] = []
+
+        for href in links:
+            name = href.get('title')
+            href = href.get('href')
+            item = {'name': name, 'path': href}
+            # Avoid duplicates
+            if (item not in api_structure[category_name]):
+                api_structure[category_name].append(item)
+
+    print(pretty(api_structure))
+
+
+def get_html(url):
+    response = requests.get(url)
+    # Check if request was successful
+    if (response.status_code == 200):
+        html_doc = response.text
+        return html_doc
+    else:
+        print(f'Error: {response.status_code}')
+
+
+def main():
+    url = 'https://docs.cycling74.com/apiref/js/'
+    html_doc = get_html(url)
+    make_api_structure(html_doc)
+
+
+main()
