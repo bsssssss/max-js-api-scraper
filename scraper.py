@@ -56,6 +56,10 @@ class Formatter(object):
 pretty = Formatter()
 
 
+def process_api(api_structure):
+    print(pretty(api_structure))
+
+
 def make_api_structure(html_doc):
     api_structure = {}
     soup = BeautifulSoup(html_doc, 'html.parser')
@@ -63,21 +67,21 @@ def make_api_structure(html_doc):
 
     for category in categories:
         table = category.find_next()
-        links = table.find_all('a')
+        references = table.find_all('a')
         category_name = category.text
 
         if (category_name not in api_structure):
-            api_structure[category_name] = []
+            api_structure[category_name] = {}
 
-        for href in links:
-            name = href.get('title')
-            href = href.get('href')
-            item = {'name': name, 'path': href}
-            # Avoid duplicates
-            if (item not in api_structure[category_name]):
-                api_structure[category_name].append(item)
+        for ref in references:
+            name = ref.get('title')
+            href = ref.get('href')
+            item = {'path': href}
 
-    print(pretty(api_structure))
+            if (name not in api_structure[category_name]):
+                api_structure[category_name][name] = item
+
+    process_api(api_structure)
 
 
 def get_html(url):
@@ -88,12 +92,13 @@ def get_html(url):
         return html_doc
     else:
         print(f'Error: {response.status_code}')
+        return None
 
 
 def main():
-    url = 'https://docs.cycling74.com/apiref/js/'
-    html_doc = get_html(url)
-    make_api_structure(html_doc)
+    main_url = 'https://docs.cycling74.com/apiref/js/'
+    main_html = get_html(main_url)
+    make_api_structure(main_html)
 
 
 main()
